@@ -178,7 +178,7 @@ class x86Tester{
 public:
     x86Tester();
     //Assembles the given code as assembly
-    void Assemble(string code);
+    void Assemble(string code, string data = "");
     //loads a raw binary file
     void LoadFile(string file);
     //Loads the current x86 state into the checkpoint field
@@ -188,8 +188,8 @@ public:
     void Compare(x86Checkpoint &check, bool checkeip=false);
     //Runs the x86 VM for the specified number of instructions
     void Run(int count=1000);
-    void Run(string code, int count=1000){
-        Assemble(code);
+    void Run(string code, string data = "", int count=1000){
+        Assemble(code, data);
         Run(count);
     }
 

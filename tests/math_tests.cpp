@@ -613,5 +613,19 @@ TEST_CASE("op_or_axW_immW", "[or]") {
     test.Compare(check);
 }
 
+TEST_CASE("op_or_r8_rm8", "[or]") {
+    x86Tester test;
+    x86Checkpoint check = test.LoadCheckpoint();
+    test.Run(
+            "mov al, 0x16\n"
+            "or  al, [num1]\n", 
+            "num1 db 0x89\n");
+    check.SetReg32(EAX, 0x9f);
+    check.SetPF();
+    check.SetSF();
+    check.UnsetZF();
+    test.Compare(check);
+}
+
 
 
