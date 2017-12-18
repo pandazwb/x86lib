@@ -223,7 +223,7 @@ void x86CPU::Exec(int cyclecount){
 				eip++; //undo the decrement by Int
 				break;
                 case 6: //unknown opcode
-                    throw CpuPanic_excp("Unknown opcode",(err.code|0xF000)|TRIPLE_FAULT_EXCP);
+                    throw CPUFaultException("Unknown opcode",(err.code|0xF000)|TRIPLE_FAULT_EXCP);
 				case 5: //(186+ bounds check)
 				if(cpu_level >= CPU186){
 					Int16(err.code);
@@ -231,13 +231,13 @@ void x86CPU::Exec(int cyclecount){
 					break;
 				}
 				default:
-				throw CpuPanic_excp("16bit Faults",(err.code|0xF000)|TRIPLE_FAULT_EXCP);
+				throw CPUFaultException("16bit Faults",(err.code|0xF000)|TRIPLE_FAULT_EXCP);
 			}
 		}
-		catch(Mem_excp err){
+		catch(MemoryException err){
             std::ostringstream oss;
             oss << "Memory error at 0x" << std::hex << err.address;
-			throw CpuPanic_excp(oss.str(),TRIPLE_FAULT_EXCP);
+			throw CPUFaultException(oss.str(),TRIPLE_FAULT_EXCP);
 		}
 		if(i>=cyclecount){
 			done=true;
@@ -262,6 +262,7 @@ void x86CPU::Cycle(){
     //note this bit for 0x0F checking could probably be better in this very critical loop
     beginEIP = eip;
     opbyte = ReadCode8(0);
+    opcodeExtra = -1;
     if(opbyte == 0x0F){
         //two byte opcode
         eip++;
@@ -299,6 +300,7 @@ void x86CPU::InstallOp(uint8_t num,opcode func, opcode *opcode_table){
 
 void x86CPU::op_ext_group(){
 	ModRM rm(this);
+    opcodeExtra = rm.GetExtra();
 	(this->*opcodes_hosted_ext_group[opbyte][rm.GetExtra()])(rm);
 }
 
@@ -414,10 +416,10 @@ void x86CPU::InitOpcodes(){
    // op(0x69, op_imul_rW_rmW_immW); //186 (note: uses /r for rW)
     op(0x6A, op_push_imm8);
    // op(0x6B, op_imul_rW_rmW_imm8); //186 (note: uses /r for rW, imm8 is sign extended)
-    //op(0x6C, op_insb_m8_dx); //186
-    //op(0x6D, op_insW_mW_dx); //186
-    //op(0x6E, op_outsb_dx_m8); //186
-    //op(0x6F, op_outsW_dx_mW); //186
+    op(0x6C, op_insb_m8_dx); //186
+    op(0x6D, op_insW_mW_dx); //186
+    op(0x6E, op_outsb_dx_m8); //186
+    op(0x6F, op_outsW_dx_mW); //186
     for(int i=0;i<16;i++){
     	op(0x70+i, op_jcc_rel8);
     }

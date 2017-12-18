@@ -89,7 +89,6 @@ void WritePort(uint16_t port,uint32_t val){
 	functions to try out...*/
 	switch(port){
 		case 0: //print ascii char of val
-		cout << "printing.. "<< (int) val << endl;
 		cout << (char) val << flush;
 		break;
 		case 1: //print value of byte
@@ -291,7 +290,7 @@ int main(int argc, char* argv[]){
 				}
 			}
 		}
-		catch(CpuPanic_excp err){
+		catch(CPUFaultException err){
 			cout << "CPU Panic!" <<endl;
 			cout << "Message: " << err.desc << endl;
 			cout << "Code: 0x" << hex << err.code << endl;
@@ -300,14 +299,7 @@ int main(int argc, char* argv[]){
 			cout << endl;
 			return 1;
 		}
-		catch(Default_excp err){
-			cout << "!!Undefined Error!!" << endl;
-			cout << "File: " << err.file << endl;
-			cout << "Function: " << err.func << "()" <<endl;
-			cout << "Line: " << err.line << endl;
-			return 1;
-		}
-		catch(Mem_excp *err){
+		catch(MemoryException *err){
 			cout << "Memory Error!" <<endl;
 			cout << "Address: 0x" << hex << err->address << endl;
 			cout <<"OPCODE: " << cpu->GetLastOpcodeName() << "; hex: 0x" << hex << cpu->GetLastOpcode() << endl;

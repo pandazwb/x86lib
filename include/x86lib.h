@@ -35,6 +35,7 @@ This file is part of the x86Lib project.
 #include <stdint.h>
 #include <string>
 #include <cstring>
+#include <sstream>
 
 #ifdef X86LIB_BUILD
 #include <x86lib_internal.h>
@@ -88,46 +89,22 @@ static const uint32_t TRIPLE_FAULT_EXCP=0x10000; //Triple fault...This should be
 
 
 
-//!	A debug exception
-/*!	This exception should really only be used when debugging.
-	It should be used as throw(Default_excp(__FILE__,__FUNCTION__,__LINE__));
-*/
-class Default_excp{ //Internal only...these should never happen when released...
-
-	public:
-	/*!
-	\param file_ The file name in which the exception occured(use __FILE__)
-	\param func_ The function in which the exception occured(use __FUNCTION__)
-	\param line_ The line number which the excption occured on(use __LINE__)
-	*/
-	Default_excp(std::string file_,std::string func_,int line_){
-		file=file_;
-		func=func_;
-		line=line_;
-	}
-	//! The file which the exception was thrown from
-	std::string file;
-	//! The function which the exception was thrown from
-	std::string func;
-	//! The line which the exception was thrown from
-	int line;
-};
-
 //! CPU Panic exception
 /*!	This exception is thrown out of x86CPU if a fatal CPU error occurs,
 	such as a triple fault.
 */
-class CpuPanic_excp{ //used for fatal CPU errors, such as triple fault..
+class CPUFaultException : public std::runtime_error { //used for fatal CPU errors, such as triple fault..
 
 	public:
 	/*!
 	\param desc_ A text description of the error
 	\param code_ An exception code
 	*/
-	CpuPanic_excp(std::string desc_,uint32_t code_){
+	CPUFaultException(std::string desc_,uint32_t code_) : std::runtime_error(desc_) {
 		desc=desc_;
 		code=code_;
 	}
+    virtual ~CPUFaultException() throw() {}
 	//!A text description of the error
 	std::string desc;
 	//!An exception code
@@ -140,20 +117,17 @@ class CpuPanic_excp{ //used for fatal CPU errors, such as triple fault..
 	This does not always result in a triple fault.
 	/sa PhysMemory
 */
-class Mem_excp{ //Exclusively for the Memory Classes, these are caught and then a more appropriate excp is thrown
+class MemoryException : public std::runtime_error { //Exclusively for the Memory Classes, these are caught and then a more appropriate excp is thrown
 	public:
 	/*!
 	\param address_ The address at which had problems being read or written
 	*/
-	Mem_excp(uint32_t address_){
+	MemoryException(uint32_t address_) : std::runtime_error("Memory Error") {
+        std::cout << "EXCEPTION: memory error @ 0x" << std::hex << address_ << std::endl; 
 		address=address_;
 	}
+    virtual ~MemoryException() throw() {}
 	uint32_t address;
-};
-
-class System_excp{
-	public:
-	System_excp(){}
 };
 
 class x86CPU;
@@ -184,6 +158,11 @@ class PortDevice{
 };
 
 inline PortDevice::~PortDevice(){}
+
+class InterruptHypervisor{
+public:
+    virtual void HandleInt(int number, x86CPU &vm)=0;
+};
 
 typedef struct DeviceRange
 {
@@ -278,7 +257,7 @@ class ROMemory : public RAMemory{
     }
 
     virtual void Write(uint32_t address,int count,void *buffer){
-        throw new Mem_excp(address);
+        throw new MemoryException(address);
     }
 };
 
@@ -392,6 +371,7 @@ class ModRM{
 	bool use_ss;
 	bool op_specific;
 	x86CPU *this_cpu;
+    bool jumpBehavior;
 	private:
 	mod_rm modrm;
     scaleindex sib;
@@ -428,7 +408,10 @@ class ModRM{
     uint16_t Imm16();
     uint32_t Imm32();
     uint32_t ImmW();
-
+    //This tells ModRM to not increment EIP in the destruction of this object
+    void setJumpBehavior(){
+        jumpBehavior = true;
+    }
 };
 
 //!	The main CPU control class
@@ -464,6 +447,7 @@ class x86CPU{
     //This is used when needing to go back to the current opcode while including all prefixes
     uint32_t beginEIP;
     uint8_t opbyte; //current opcode (updated in cycle() and prefix opcodes)
+    int opcodeExtra; //current opcode (updated in cycle() and prefix opcodes)
 	protected:
 	//! Do one CPU opcode
 	/*! This should be put in the main loop, as this is what makes the CPU work.
@@ -495,9 +479,16 @@ class x86CPU{
 	public:
 	MemorySystem *Memory;
 	PortSystem *Ports;
+    InterruptHypervisor *Hypervisor;
 
     std::string GetLastOpcodeName(){
-        return lastOpcodeStr;
+        if(opcodeExtra != -1){
+            std::stringstream s;
+            s << lastOpcodeStr << "/" << opcodeExtra;
+            return s.str();
+        }else{
+            return lastOpcodeStr;
+        }
     }
     uint32_t GetLastOpcode(){
         return lastOpcode;
@@ -665,7 +656,7 @@ class x86CPU{
             regs32[which] = (regs32[which] & 0xFFFFFF00) | val;
         }else{
             //4-7 is high bytes; ah, ch, dh, bh
-            regs32[which] = (regs32[which - 4] & 0xFFFF00FF) | (val << 8);
+            regs32[which - 4] = (regs32[which - 4] & 0xFFFF00FF) | (val << 8);
         }
     }
     inline void SetReg16(int which, uint16_t val){
@@ -675,7 +666,7 @@ class x86CPU{
     inline void SetReg32(int which, uint32_t val){
         regs32[which] = val;
     }
-    inline uint16_t Reg32(int which){
+    inline uint32_t Reg32(int which){
         return regs32[which];
     }
 
