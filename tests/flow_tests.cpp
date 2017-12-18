@@ -141,12 +141,12 @@ TEST_CASE("op_retn", "[flow]"){
     check.AddReg32(ESP, -4);
     check.SetStack32(0, 0xFFFF1234);
     test.Apply(check);
-    test.Run("ret 4", 1);
+    test.Run("ret 4", "", 1);
     REQUIRE(test.Check().GetEIP() == 0xFFFF1234);
     REQUIRE(test.Check().Reg32(ESP) == stack + 4);
     //reset and try short mode
     test.Apply(check);
-    test.Run("o16 ret 4", 1);
+    test.Run("o16 ret 4", "", 1);
     REQUIRE(test.Check().GetEIP() == 0x1234);
     REQUIRE(test.Check().Reg32(ESP) == stack + 2);
 }

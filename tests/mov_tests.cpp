@@ -69,7 +69,7 @@ TEST_CASE("mov_rmW_immW", "[mov]") {
     test.Apply(check);
 
     INFO("32bit mov");
-    test.Run("mov dword [ebx + 10], 0x12345678", 1);
+    test.Run("mov dword [ebx + 10], 0x12345678", "", 1);
     REQUIRE(test.Check().HighScratch32(10) == 0x12345678);
 
     test.Apply(check);
@@ -79,7 +79,7 @@ TEST_CASE("mov_rmW_immW", "[mov]") {
 
     INFO("32bit mov with a16");
     test.Apply(check);
-    test.Run("a16 mov dword [bx + 10], 0x12345678", 1);
+    test.Run("a16 mov dword [bx + 10], 0x12345678", "", 1);
     REQUIRE(test.Check().Scratch32(10) == 0x12345678); //when rounded off to 16-bits, HighScratch = Scratch
 
     test.Apply(check);
@@ -89,7 +89,7 @@ TEST_CASE("mov_rmW_immW", "[mov]") {
 
     INFO("16bit mov with a16");
     test.Apply(check);
-    test.Run("o16 a16 mov word [bx + 10], 0x1234", 1);
+    test.Run("o16 a16 mov word [bx + 10], 0x1234", "", 1);
     REQUIRE(test.Check().Scratch32(10) == 0x1234); //when rounded off to 16-bits, HighScratch = Scratch
 
     test.Apply(check);
@@ -107,42 +107,42 @@ TEST_CASE("lea", "[lea]") {
 
     INFO("32bit lea");
     test.Apply(check);
-    test.Run("lea eax, [ebx + 10 * 2]", 1);
+    test.Run("lea eax, [ebx + 10 * 2]", "", 1);
     REQUIRE(test.Check().Reg32(EAX) == HIGH_SCRATCH_ADDRESS + 20);
 
     test.Apply(check);
-    test.Run("lea eax, [ebx - 50]", 1);
+    test.Run("lea eax, [ebx - 50]", "", 1);
     REQUIRE(test.Check().Reg32(EAX) == HIGH_SCRATCH_ADDRESS - 50);
 
     INFO("16bit lea");
     test.Apply(check);
-    test.Run("o16 a16 lea ax, [bx + si + 2]", 1);
+    test.Run("o16 a16 lea ax, [bx + si + 2]", "", 1);
     REQUIRE((int)(test.Check().Reg32(EAX) == 0xFFFF0000 | (SCRATCH_ADDRESS + 10 + 2)));
 
     test.Apply(check);
-    test.Run("o16 a16 lea ax, [bx + si + 2]", 1);
+    test.Run("o16 a16 lea ax, [bx + si + 2]", "", 1);
     REQUIRE((int)(test.Check().Reg32(EAX) == 0xFFFF0000 | (SCRATCH_ADDRESS + 10 + 2)));
 
     INFO("mixed lea");
     test.Apply(check);
-    test.Run("o32 a16 lea eax, [bx + si + 2]", 1);
+    test.Run("o32 a16 lea eax, [bx + si + 2]", "", 1);
     REQUIRE((int)(test.Check().Reg32(EAX) == (SCRATCH_ADDRESS + 10 + 2)));
 
     test.Apply(check);
-    test.Run("o16 a32 lea ax, [ebx - 50]", 1);
+    test.Run("o16 a32 lea ax, [ebx - 50]", "", 1);
     REQUIRE((int)(test.Check().Reg32(EAX) == 0xFFFF0000 | (SCRATCH_ADDRESS - 50)));
 
     INFO("big lea");
     test.Apply(check);
-    test.Run("lea eax, [0x12345678]", 1);
+    test.Run("lea eax, [0x12345678]", "", 1);
     REQUIRE(test.Check().Reg32(EAX) == 0x12345678);
 
     test.Apply(check);
-    test.Run("lea eax, [0x20000 + esi * 2]", 1);
+    test.Run("lea eax, [0x20000 + esi * 2]", "", 1);
     REQUIRE(test.Check().Reg32(EAX) == 0x20000 + 20);
 
     test.Apply(check);
-    test.Run("a16 lea eax, [bx + si + 0x1234]", 1);
+    test.Run("a16 lea eax, [bx + si + 0x1234]", "", 1);
     REQUIRE((int)(test.Check().Reg32(EAX) == (SCRATCH_ADDRESS + 10 + 0x1234) & 0xFFFF));
 }
 
