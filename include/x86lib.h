@@ -188,6 +188,7 @@ class MemorySystem{
 	volatile uint32_t locked; 
 	public:
 	MemorySystem();
+    virtual ~MemorySystem() {memorySystemVector.clear();}
 	void Add(uint32_t low,uint32_t high,MemoryDevice *memdev);
 	void Remove(uint32_t low,uint32_t high);
 	void Remove(MemoryDevice *memdev);
